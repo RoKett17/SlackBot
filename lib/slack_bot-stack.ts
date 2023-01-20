@@ -7,8 +7,6 @@ import { BlockPublicAccess, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
-import { Action } from 'aws-cdk-lib/aws-codepipeline';
-import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
 
 export class SlackBotStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -37,16 +35,18 @@ export class SlackBotStack extends Stack {
     //slackChannel.addNotificationTopic(new sns.Topic(this, 'chat topic'));
     slackBot.addNotificationTopic(bottopic);
    
+    //creating the cw alarm - this is what im stick on 
     const alarm = new cloudwatch.Alarm(this, 'Errors', {
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: 0,
       evaluationPeriods: 1,
-      metric: , //fix
+      metric: , // not sure what to put here
       datapointsToAlarm: 1,
       actionsEnabled: true,
     });
 
-    //triggers alarm to send notifcation to sns topic 
+    //triggers alarm to send notifcation to sns topic - work in porgress 
+    //stole this from online but not sure how it works exacly 
     alarm.addAlarmAction({
       bind(this, alarm) {
         return { alarmActionArn: bottopic.topicArn}
@@ -57,6 +57,7 @@ export class SlackBotStack extends Stack {
     //   SnsAction.
     // );
 
+    //back plan is connecting cw to cloudtrail events - dont need this if i get cw alarm working
     const eventRule = cloudtrail.Trail.onEvent(this, 'MyCloudWatchEvent', {
       description: 'rule is to trigger sns warning when cw sees event pattern',
       ruleName: 'ct-trigger',
@@ -69,6 +70,7 @@ export class SlackBotStack extends Stack {
       source: ['aws.s3'],
     });
 
+    //adds rule to push to sns
     eventRule.addTarget(new targets.SnsTopic(bottopic));
   }
 }
